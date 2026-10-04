@@ -41,36 +41,6 @@ onUnmounted(() => {
 
     <!-- Ticket Card Container de Votação (Estilo Ticket Holográfico Preto & Vermelho) -->
     <div class="ticket-card">
-
-      <!-- Perforations SVG filter -->
-      <svg class="filter">
-        <filter id="bump">
-          <feTurbulence
-            result="noise"
-            numOctaves="3"
-            baseFrequency="0.7"
-            type="fractalNoise"
-          ></feTurbulence>
-          <feSpecularLighting
-            in="noise"
-            result="specular"
-            lighting-color="#ff1e1e"
-            specularExponent="25"
-            specularConstant="0.8"
-            surfaceScale="0.15"
-          >
-            <fePointLight z="210" y="100" x="100"></fePointLight>
-          </feSpecularLighting>
-          <feComposite
-            result="noise2"
-            operator="in"
-            in="specular"
-            in2="SourceGraphic"
-          ></feComposite>
-          <feBlend mode="screen" in2="noise2" in="SourceGraphic"></feBlend>
-        </filter>
-      </svg>
-
       <!-- Fundo Holográfico Perfurado -->
       <div class="bg holographic"></div>
 
@@ -170,26 +140,18 @@ onUnmounted(() => {
   user-select: none;
   overflow: hidden;
 
-  filter: drop-shadow(0 0 30px rgba(229, 9, 20, 0.5));
+  box-shadow: 0 0 35px rgba(229, 9, 20, 0.5);
   animation: hover 3.5s ease-in-out infinite alternate;
-  will-change: transform, filter;
+  will-change: transform;
 }
 
 @keyframes hover {
   0% {
-    transform: translateY(0px) scale(1);
-    filter: drop-shadow(0 0 25px rgba(229, 9, 20, 0.4));
+    transform: translate3d(0, 0, 0);
   }
   100% {
-    transform: translateY(-8px) scale(1.02);
-    filter: drop-shadow(0 0 45px rgba(229, 9, 20, 0.7));
+    transform: translate3d(0, -6px, 0);
   }
-}
-
-.filter {
-  position: absolute;
-  width: 0;
-  height: 0;
 }
 
 .bg {
@@ -197,60 +159,11 @@ onUnmounted(() => {
   inset: 0;
   border-radius: 16px;
   background-color: #0d0d0d;
-  filter: url(#bump);
-  mask:
-    radial-gradient(
-      circle at 50% 0,
-      #fff0 calc(var(--perforation-size) - 5px),
-      #000 calc(var(--perforation-size) - 4px)
-    ),
-    radial-gradient(
-      circle at 50% 100%,
-      #fff0 calc(var(--perforation-size) - 5px),
-      #000 calc(var(--perforation-size) - 4px)
-    ),
-    radial-gradient(circle 10px at left center, #000 98%, #0000 100%),
-    radial-gradient(circle 10px at right center, #000 98%, #0000 100%),
-    repeating-linear-gradient(
-      90deg,
-      #000 10px,
-      #000 15px,
-      #0000 16px,
-      #0000 24px
-    );
-
-  mask-repeat: repeat-x, repeat-x, no-repeat, no-repeat, repeat-x;
-
-  mask-size:
-    calc(var(--perforation-size) * 2) 100%,
-    calc(var(--perforation-size) * 2) 100%,
-    20px 20px,
-    20px 20px,
-    10px 2px;
-
-  mask-position:
-    calc(0.5 * var(--perforation-size)) top,
-    calc(0.5 * var(--perforation-size)) bottom,
-    left var(--cutouts-adjust),
-    right var(--cutouts-adjust),
-    0 calc(var(--cutouts-adjust) + 7px);
-
-  mask-composite: intersect, exclude, add, add;
+  border: 1px solid rgba(229, 9, 20, 0.4);
 }
 
 .holographic {
-  background-image: linear-gradient(to bottom, #9008, 90%, #000),
-    conic-gradient(
-      at 60% 50%,
-      #1a0000,
-      #e50914,
-      #800000,
-      #141414,
-      #ff1e1e,
-      #400000,
-      #e50914,
-      #000
-    );
+  background: linear-gradient(135deg, #140303 0%, #2b0505 50%, #0d0d0d 100%);
 }
 
 .holographic::before {
@@ -258,23 +171,8 @@ onUnmounted(() => {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: radial-gradient(circle at 70% 20%, #e50914, #0000),
-    repeating-radial-gradient(circle at 30% 80%, #300, #900 48px, #111 150px);
-  mix-blend-mode: color-burn;
-}
-
-.holographic::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(to bottom, #e5091455, #ff0000, #600, #e5091455);
-  mix-blend-mode: difference;
-
-  animation: bg-pos 4s ease-in-out infinite alternate;
-  background-position: 0 0;
-  background-size: 100% 300%;
-  background-repeat: repeat;
+  background: radial-gradient(circle at 70% 20%, rgba(229, 9, 20, 0.25), transparent 70%);
+  pointer-events: none;
 }
 
 @keyframes bg-pos {

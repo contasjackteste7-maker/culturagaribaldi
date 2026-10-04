@@ -29,26 +29,14 @@ function toggleAudio() {
 function startAudio() {
   if (!audioRef.value) return
   audioRef.value.volume = 0.6
+  audioRef.value.play().then(() => {
+    isMuted.value = false
+  }).catch(() => {})
+}
 
-  const playPromise = audioRef.value.play()
-  if (playPromise !== undefined) {
-    playPromise.then(() => {
-      isMuted.value = false
-    }).catch(() => {
-      const enableAudio = () => {
-        if (audioRef.value && audioRef.value.paused) {
-          audioRef.value.volume = 0.6
-          audioRef.value.play().then(() => {
-            isMuted.value = false
-          }).catch(() => {})
-        }
-      }
-      window.addEventListener('pointerdown', enableAudio, { once: true })
-      window.addEventListener('click', enableAudio, { once: true })
-      window.addEventListener('touchstart', enableAudio, { once: true })
-      window.addEventListener('keydown', enableAudio, { once: true })
-    })
-  }
+function handleEnter() {
+  showGlitchIntro.value = false
+  startAudio()
 }
 
 onMounted(() => {
@@ -56,26 +44,14 @@ onMounted(() => {
     audioRef.value.load()
   }
 
-  startAudio()
-
   const enableAudioInstant = () => {
-    if (audioRef.value && audioRef.value.paused) {
-      audioRef.value.volume = 0.6
-      audioRef.value.play().then(() => {
-        isMuted.value = false
-      }).catch(() => {})
-    }
+    startAudio()
   }
 
   window.addEventListener('pointerdown', enableAudioInstant, { once: true })
   window.addEventListener('click', enableAudioInstant, { once: true })
   window.addEventListener('touchstart', enableAudioInstant, { once: true })
   window.addEventListener('keydown', enableAudioInstant, { once: true })
-
-  // Revela o sistema após breve exibição da logo com efeito glitch
-  setTimeout(() => {
-    showGlitchIntro.value = false
-  }, 1800)
 })
 
 </script>
@@ -84,18 +60,22 @@ onMounted(() => {
   <main class="relative flex min-h-screen flex-col items-center justify-center bg-[#0a0a0a] p-4 sm:p-6 text-white overflow-hidden select-none">
     <!-- Screen Glitch Preloader Intro (Tela cheia de entrada) -->
     <Transition name="fade">
-      <div v-if="showGlitchIntro" @click="showGlitchIntro = false; startAudio()" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black p-6 text-center font-mono cursor-pointer">
+      <div v-if="showGlitchIntro" @click="handleEnter" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black p-6 text-center font-mono cursor-pointer select-none">
         <!-- Scanlines CRT Overlay -->
         <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none"></div>
 
-        <!-- Conteúdo do Glitch Intro (Apenas a logo em animação Glitch) -->
+        <!-- Conteúdo do Glitch Intro -->
         <div class="relative z-10 flex flex-col items-center max-w-lg">
-          <div class="relative">
+          <div class="relative mb-6">
             <img src="/logo-cultura-vermelho.png" alt="Cultura Logo Glitch" class="h-44 sm:h-60 w-auto object-contain animate-glitch drop-shadow-[0_0_30px_rgba(229,9,20,0.8)]" />
             <img src="/logo-cultura-vermelho.png" alt="Cultura Logo Red Glitch" class="absolute top-0 left-0 h-44 sm:h-60 w-auto object-contain opacity-70 animate-glitch-fast red-shift mix-blend-screen" />
             <img src="/logo-cultura-vermelho.png" alt="Cultura Logo Blue Glitch" class="absolute top-0 left-0 h-44 sm:h-60 w-auto object-contain opacity-70 animate-glitch-fast cyan-shift mix-blend-screen" />
           </div>
-          <p class="mt-8 text-xs sm:text-sm font-semibold tracking-widest text-red-500/90 animate-pulse">CLICK ANYWHERE TO START 🎃</p>
+          
+          <button class="px-6 py-3 rounded-full border border-red-500/60 bg-red-950/60 hover:bg-red-900/80 text-white font-extrabold text-xs sm:text-sm uppercase tracking-widest transition-all transform hover:scale-105 shadow-[0_0_25px_rgba(229,9,20,0.6)] animate-pulse flex items-center gap-2">
+            <span>CLICK TO ENTER CULTURAFLIX</span>
+            <span>🎃</span>
+          </button>
         </div>
 
       </div>

@@ -36,26 +36,41 @@ function startAudio() {
       isMuted.value = false
     }).catch(() => {
       const enableAudio = () => {
-        if (audioRef.value) {
+        if (audioRef.value && audioRef.value.paused) {
+          audioRef.value.volume = 0.6
           audioRef.value.play().then(() => {
             isMuted.value = false
           }).catch(() => {})
         }
-        window.removeEventListener('pointerdown', enableAudio)
-        window.removeEventListener('click', enableAudio)
-        window.removeEventListener('keydown', enableAudio)
       }
       window.addEventListener('pointerdown', enableAudio, { once: true })
       window.addEventListener('click', enableAudio, { once: true })
+      window.addEventListener('touchstart', enableAudio, { once: true })
       window.addEventListener('keydown', enableAudio, { once: true })
     })
   }
 }
 
 onMounted(() => {
-  setTimeout(() => {
-    startAudio()
-  }, 300)
+  if (audioRef.value) {
+    audioRef.value.load()
+  }
+
+  startAudio()
+
+  const enableAudioInstant = () => {
+    if (audioRef.value && audioRef.value.paused) {
+      audioRef.value.volume = 0.6
+      audioRef.value.play().then(() => {
+        isMuted.value = false
+      }).catch(() => {})
+    }
+  }
+
+  window.addEventListener('pointerdown', enableAudioInstant, { once: true })
+  window.addEventListener('click', enableAudioInstant, { once: true })
+  window.addEventListener('touchstart', enableAudioInstant, { once: true })
+  window.addEventListener('keydown', enableAudioInstant, { once: true })
 
   // Revela o sistema após breve exibição da logo com efeito glitch
   setTimeout(() => {

@@ -81,7 +81,7 @@ function getRatingRibbonStyle(rating?: string) {
         </div>
         
         <h2 class="text-2xl sm:text-4xl font-black text-white uppercase tracking-wider drop-shadow">
-          📅 MOVIE SESSION DATE: <span class="text-red-500 underline underline-offset-8 decoration-red-600">OCTOBER 30TH (10/30)</span>
+          MOVIE SESSION DATE: <span class="text-red-500 underline underline-offset-8 decoration-red-600">OCTOBER 30TH (10/30)</span>
         </h2>
         
         <p class="text-xs sm:text-sm text-gray-400 font-medium">

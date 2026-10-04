@@ -25,7 +25,7 @@ onMounted(() => {
   playGhostSound()
   ghostSoundInterval = setInterval(() => {
     playGhostSound()
-  }, 3000)
+  }, 5000)
 })
 
 onUnmounted(() => {
@@ -43,10 +43,6 @@ onUnmounted(() => {
     <div class="ticket-card">
       <!-- Fundo Holográfico Perfurado -->
       <div class="bg holographic"></div>
-
-      <!-- Notas Musicais Sombrias em Overlay -->
-      <div class="notes">🎬🎬🎬🎬</div>
-      <div class="notes">🎟️🎟️🎟️</div>
 
       <!-- Cabeçalho do Ticket com Fantasminha e Título -->
       <div class="header flex flex-col items-center justify-center">

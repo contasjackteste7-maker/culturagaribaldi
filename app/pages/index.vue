@@ -269,6 +269,7 @@ function handleScroll() {
 }
 
 const showNetflixIntro = ref(true)
+const isNetflixAnimationStarted = ref(false)
 const isMuted = ref(false)
 const bgAudioRef = ref<HTMLAudioElement | null>(null)
 const modalAudioRef = ref<HTMLAudioElement | null>(null)
@@ -284,10 +285,21 @@ function toggleAudio() {
   }
 }
 
+function startNetflixExperience() {
+  if (isNetflixAnimationStarted.value) return
+  isNetflixAnimationStarted.value = true
+
+  playTudumAndSequenceBgAudio()
+
+  setTimeout(() => {
+    showNetflixIntro.value = false
+  }, 2300)
+}
+
 function playTudumAndSequenceBgAudio() {
   if (tudumAudioRef.value) {
     tudumAudioRef.value.currentTime = 0
-    tudumAudioRef.value.volume = 0.8
+    tudumAudioRef.value.volume = 0.9
     
     tudumAudioRef.value.onended = () => {
       startBgAudio()
@@ -295,23 +307,7 @@ function playTudumAndSequenceBgAudio() {
     
     tudumAudioRef.value.play().then(() => {
     }).catch(() => {
-      const enableAudioOnUserAction = () => {
-        if (tudumAudioRef.value) {
-          tudumAudioRef.value.play().then(() => {
-            tudumAudioRef.value!.onended = () => { startBgAudio() }
-          }).catch(() => {
-            startBgAudio()
-          })
-        } else {
-          startBgAudio()
-        }
-        window.removeEventListener('pointerdown', enableAudioOnUserAction, { once: true })
-        window.removeEventListener('click', enableAudioOnUserAction, { once: true })
-        window.removeEventListener('keydown', enableAudioOnUserAction, { once: true })
-      }
-      window.addEventListener('pointerdown', enableAudioOnUserAction, { once: true })
-      window.addEventListener('click', enableAudioOnUserAction, { once: true })
-      window.addEventListener('keydown', enableAudioOnUserAction, { once: true })
+      startBgAudio()
     })
   } else {
     startBgAudio()
@@ -359,12 +355,17 @@ onMounted(() => {
   startAutoRotate()
   window.addEventListener('scroll', handleScroll)
   checkIsAdmin()
-  
-  playTudumAndSequenceBgAudio()
 
-  setTimeout(() => {
-    showNetflixIntro.value = false
-  }, 2300)
+  if (tudumAudioRef.value) tudumAudioRef.value.load()
+  if (bgAudioRef.value) bgAudioRef.value.load()
+
+  const autoStartOnUserAction = () => {
+    startNetflixExperience()
+  }
+
+  window.addEventListener('pointerdown', autoStartOnUserAction, { once: true })
+  window.addEventListener('click', autoStartOnUserAction, { once: true })
+  window.addEventListener('keydown', autoStartOnUserAction, { once: true })
 })
 
 onUnmounted(() => {
@@ -435,12 +436,23 @@ async function handleLogout() {
       <span>{{ isMuted ? 'Sound: Off' : 'Sound: On 🎃' }}</span>
     </button>
 
-    <!-- Intro Animada -->
+    <!-- Intro Animada Estilo Netflix -->
     <Transition name="fade">
-      <div v-if="showNetflixIntro" class="fixed inset-0 z-50 flex items-center justify-center bg-black overflow-hidden pointer-events-none">
-        <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[length:100%_4px]"></div>
+      <div v-if="showNetflixIntro" @click="startNetflixExperience" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black overflow-hidden select-none cursor-pointer">
+        <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.4)_50%)] bg-[length:100%_4px] pointer-events-none"></div>
 
-        <div class="relative flex flex-col items-center justify-center animate-netflix-zoom">
+        <!-- Tela Pré-Animação: Pergunta Interativa para disparar o Tudum -->
+        <div v-if="!isNetflixAnimationStarted" class="relative z-10 flex flex-col items-center gap-6 max-w-lg p-6 text-center animate-fade-in">
+          <img src="/logo-cultura-vermelho.png" alt="CulturaFlix Logo" class="h-32 sm:h-44 w-auto object-contain drop-shadow-[0_0_40px_rgba(229,9,20,0.8)]" />
+          
+          <button class="px-8 py-3.5 rounded-full border border-red-500/80 bg-red-600 hover:bg-red-700 text-white font-black text-sm sm:text-base uppercase tracking-widest transition-all transform hover:scale-105 shadow-[0_0_35px_rgba(229,9,20,0.8)] animate-pulse flex items-center gap-2">
+            <span>SHALL WE BEGIN?</span>
+            <span>🍿</span>
+          </button>
+        </div>
+
+        <!-- Animação do Logo Zoom com Som Tudum da Netflix -->
+        <div v-else class="relative flex flex-col items-center justify-center animate-netflix-zoom">
           <div class="relative">
             <img src="/logo-cultura-vermelho.png" alt="CulturaFlix Logo" class="h-56 sm:h-80 w-auto object-contain drop-shadow-[0_0_60px_rgba(229,9,20,0.9)] animate-pulse-fast" />
             <img src="/logo-cultura-vermelho.png" alt="CulturaFlix Red Shift" class="absolute top-0 left-0 h-56 sm:h-80 w-auto object-contain opacity-80 animate-glitch-fast red-shift mix-blend-screen" />

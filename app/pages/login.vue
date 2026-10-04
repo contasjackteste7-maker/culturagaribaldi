@@ -69,7 +69,7 @@ onMounted(() => {
   <main class="relative flex min-h-screen flex-col items-center justify-center bg-[#0a0a0a] p-4 sm:p-6 text-white overflow-hidden select-none">
     <!-- Screen Glitch Preloader Intro (Tela cheia de entrada) -->
     <Transition name="fade">
-      <div v-if="showGlitchIntro" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black p-6 text-center font-mono">
+      <div v-if="showGlitchIntro" @click="showGlitchIntro = false; startAudio()" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black p-6 text-center font-mono cursor-pointer">
         <!-- Scanlines CRT Overlay -->
         <div class="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_4px] pointer-events-none"></div>
 
@@ -80,6 +80,7 @@ onMounted(() => {
             <img src="/logo-cultura-vermelho.png" alt="Cultura Logo Red Glitch" class="absolute top-0 left-0 h-44 sm:h-60 w-auto object-contain opacity-70 animate-glitch-fast red-shift mix-blend-screen" />
             <img src="/logo-cultura-vermelho.png" alt="Cultura Logo Blue Glitch" class="absolute top-0 left-0 h-44 sm:h-60 w-auto object-contain opacity-70 animate-glitch-fast cyan-shift mix-blend-screen" />
           </div>
+          <p class="mt-8 text-xs sm:text-sm font-semibold tracking-widest text-red-500/90 animate-pulse">CLICK ANYWHERE TO START 🎃</p>
         </div>
 
       </div>

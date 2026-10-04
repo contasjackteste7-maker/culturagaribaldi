@@ -13,55 +13,26 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const { action } = body || {}
 
-    // Buscar a eleição principal (ou mais recente)
-    const { data: eleicoes } = await client
-      .from('eleicoes')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(1)
-
-    const eleicaoAtual = eleicoes?.[0]
-    if (!eleicaoAtual) {
-      throw createError({ statusCode: 404, statusMessage: 'Nenhuma eleição cadastrada.' })
-    }
-
-    if (action === 'toggle_public') {
-      const novoStatus = !eleicaoAtual.resultado_publico_ativo
-      await client
-        .from('eleicoes')
-        .update({ resultado_publico_ativo: novoStatus })
-        .eq('id', eleicaoAtual.id)
-      return { success: true, resultado_publico_ativo: novoStatus }
-    }
-
     if (action === 'update_snapshot') {
-      // 1. Obter todos os candidatos
-      const { data: candidatos } = await client.from('candidatos').select('*')
-      // 2. Obter votos
+      const { data: filmes } = await client.from('filmes').select('*')
       const { data: votos } = await client.from('votos').select('*')
 
       const totalVotos = votos?.length || 0
       const countMap: Record<string, number> = {}
-      let brancos = 0
-      let nulos = 0
 
       votos?.forEach((v) => {
-        if (v.tipo_voto === 'branco') brancos++
-        else if (v.tipo_voto === 'nulo') nulos++
-        else if (v.candidato_id) {
-          countMap[v.candidato_id] = (countMap[v.candidato_id] || 0) + 1
+        if (v.filme_id) {
+          countMap[v.filme_id] = (countMap[v.filme_id] || 0) + 1
         }
       })
 
-      const apuracaoSnapshot = (candidatos || []).map((c) => {
-        const qtd = countMap[c.id] || 0
+      const apuracaoSnapshot = (filmes || []).map((f) => {
+        const qtd = countMap[f.id] || 0
         const pct = totalVotos > 0 ? (qtd / totalVotos) * 100 : 0
         return {
-          id: c.id,
-          nome: c.nome,
-          numero: c.numero,
-          partido: c.partido,
-          foto_url: c.foto_url,
+          id: f.id,
+          nome: f.title,
+          foto_url: f.poster_url || f.banner_url,
           qtdVotos: qtd,
           porcentagem: Number(pct.toFixed(1)),
         }
@@ -72,46 +43,30 @@ export default defineEventHandler(async (event) => {
       const snapshotData = {
         updated_at: new Date().toISOString(),
         totalVotos,
-        brancos,
-        nulos,
         apuracao: apuracaoSnapshot,
       }
-
-      await client
-        .from('eleicoes')
-        .update({ resultado_congelado: snapshotData })
-        .eq('id', eleicaoAtual.id)
 
       return { success: true, snapshot: snapshotData }
     }
   }
 
-  // GET NORMAL PARA O ADMIN (COM AUDITORIA COMPLETA E DADOS EM TEMPO REAL)
-  const { data: eleicoes } = await client
-    .from('eleicoes')
+  // GET PARA O ADMIN (APURAÇÃO DE FILMES E LOG DE AUDITORIA)
+  const { data: filmes, error: errFilmes } = await client
+    .from('filmes')
     .select('*')
-    .order('created_at', { ascending: false })
-    .limit(1)
+    .order('title', { ascending: true })
 
-  const eleicaoAtual = eleicoes?.[0] || null
-
-  const { data: candidatos, error: errCand } = await client
-    .from('candidatos')
-    .select('*')
-    .order('nome', { ascending: true })
-
-  if (errCand) {
-    throw createError({ statusCode: 500, statusMessage: errCand.message })
+  if (errFilmes) {
+    throw createError({ statusCode: 500, statusMessage: errFilmes.message })
   }
 
   const { data: votos, error: errVotos } = await client
     .from('votos')
     .select(`
       id,
-      eleicao_id,
       user_id,
-      candidato_id,
-      tipo_voto,
+      email,
+      filme_id,
       created_at
     `)
     .order('created_at', { ascending: false })
@@ -120,59 +75,50 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: errVotos.message })
   }
 
-  const { data: usersData } = await client.auth.admin.listUsers()
-  const usersMap: Record<string, { email?: string; name?: string }> = {}
+  // Buscar perfis para obter nomes cadastrados
+  const { data: profiles } = await client.from('profiles').select('id, nome, email, avatar_url')
+  const profilesMap: Record<string, { nome?: string; email?: string }> = {}
+  profiles?.forEach((p) => {
+    profilesMap[p.id] = { nome: p.nome, email: p.email }
+  })
 
-  if (usersData?.users) {
-    usersData.users.forEach((u) => {
-      usersMap[u.id] = {
-        email: u.email,
-        name: u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'Eleitor',
-      }
-    })
-  }
-
-  const candMap: Record<string, any> = {}
-  candidatos?.forEach((c) => {
-    candMap[c.id] = c
+  const filmeMap: Record<string, any> = {}
+  filmes?.forEach((f) => {
+    filmeMap[f.id] = f
   })
 
   const auditVotos = (votos || []).map((v) => {
-    const voter = usersMap[v.user_id] || { email: 'Desconhecido', name: 'Eleitor' }
-    const cand = v.candidato_id ? candMap[v.candidato_id] : null
+    const prof = profilesMap[v.user_id]
+    const filme = filmeMap[v.filme_id]
 
     return {
       id: v.id,
       created_at: v.created_at,
-      tipo_voto: v.tipo_voto,
       voter_id: v.user_id,
-      voter_name: voter.name,
-      voter_email: voter.email,
-      candidato_nome: cand ? cand.nome : (v.tipo_voto === 'branco' ? 'Voto em Branco' : 'Voto Nulo'),
-      candidato_numero: cand ? cand.numero : '-',
-      candidato_partido: cand ? cand.partido : '-',
-      candidato_foto: cand ? cand.foto_url : null,
+      voter_name: prof?.nome || v.email.split('@')[0] || 'Aluno',
+      voter_email: v.email,
+      candidato_nome: filme ? filme.title : 'Filme Removido',
+      candidato_foto: filme ? (filme.poster_url || filme.banner_url) : null,
+      tipo_voto: 'Nominal',
     }
   })
 
   const totalVotos = votos?.length || 0
   const countMap: Record<string, number> = {}
-  let brancos = 0
-  let nulos = 0
 
   votos?.forEach((v) => {
-    if (v.tipo_voto === 'branco') brancos++
-    else if (v.tipo_voto === 'nulo') nulos++
-    else if (v.candidato_id) {
-      countMap[v.candidato_id] = (countMap[v.candidato_id] || 0) + 1
+    if (v.filme_id) {
+      countMap[v.filme_id] = (countMap[v.filme_id] || 0) + 1
     }
   })
 
-  const apuracao = (candidatos || []).map((c) => {
-    const qtd = countMap[c.id] || 0
+  const apuracao = (filmes || []).map((f) => {
+    const qtd = countMap[f.id] || 0
     const pct = totalVotos > 0 ? (qtd / totalVotos) * 100 : 0
     return {
-      ...c,
+      id: f.id,
+      nome: f.title,
+      foto_url: f.poster_url || f.banner_url,
       qtdVotos: qtd,
       porcentagem: Number(pct.toFixed(1)),
     }
@@ -182,11 +128,11 @@ export default defineEventHandler(async (event) => {
 
   return {
     totalVotos,
-    brancos,
-    nulos,
+    brancos: 0,
+    nulos: 0,
     apuracao,
     auditVotos,
-    resultado_publico_ativo: eleicaoAtual?.resultado_publico_ativo || false,
-    resultado_congelado: eleicaoAtual?.resultado_congelado || null,
+    resultado_publico_ativo: false,
+    resultado_congelado: null,
   }
 })

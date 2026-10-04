@@ -13,7 +13,7 @@ async function handleGoogleLogin(): Promise<void> {
   try {
     await loginWithGoogle()
   } catch (error) {
-    authError.value = error instanceof Error ? error.message : 'Não foi possível iniciar o login com Google.'
+    authError.value = error instanceof Error ? error.message : 'Could not initiate Google login.'
     isLoading.value = false
   }
 }
@@ -23,30 +23,26 @@ async function handleGoogleLogin(): Promise<void> {
   <section class="flex w-full flex-col items-center justify-center p-6 sm:p-8">
     <div class="w-full max-w-sm">
       <div class="mb-6 text-center">
-        <!-- Logo Oficial Eleições 2026 PNG Transparente -->
-        <div class="mx-auto mb-4 flex items-center justify-center">
-          <img src="/eleicoes2026.png" alt="Eleições 2026 #VOTONADEMOCRACIA" class="h-24 sm:h-28 w-auto object-contain drop-shadow-sm" />
-        </div>
-
-        <h2 class="text-xl font-extrabold tracking-tight text-[#002B54] dark:text-white">
-          Portal da Democracia
+        <h2 class="text-2xl font-bold tracking-tight text-white">
+          Sign In to Vote
         </h2>
-        <p class="mt-1 text-xs font-medium text-slate-600 dark:text-slate-300">
-          Acesse com sua conta para continuar.
+        <p class="mt-2 text-xs text-gray-400">
+          Use your Google account to access the catalog and submit your movie vote.
         </p>
       </div>
 
-      <div class="space-y-5">
+
+      <div class="space-y-6">
         <p
           v-if="authError"
-          class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300"
+          class="rounded-xl border border-red-500/40 bg-red-950/60 p-3.5 text-xs font-medium text-red-300 text-center"
         >
           {{ authError }}
         </p>
 
-        <!-- Botão Entrar com Google -->
+        <!-- Botão Entrar com Google estilo Netflix / Dark Premium -->
         <button
-          class="group relative flex min-h-[50px] w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-300 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
+          class="group relative flex min-h-[52px] w-full items-center justify-center gap-3 rounded-xl bg-white px-5 py-3 text-sm font-bold text-gray-900 shadow-md hover:bg-gray-100 active:scale-[0.98] transition-all disabled:cursor-not-allowed disabled:opacity-70"
           :disabled="isLoading"
           type="button"
           @click="handleGoogleLogin"
@@ -69,18 +65,16 @@ async function handleGoogleLogin(): Promise<void> {
               d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
             />
           </svg>
-          <span>{{ isLoading ? 'Conectando...' : 'Entrar com Google' }}</span>
+          <span>{{ isLoading ? 'Connecting with Google...' : 'Sign in with Google' }}</span>
         </button>
 
-        <!-- Detalhe em cores oficiais -->
-        <div class="h-1 w-full rounded-full bg-gradient-to-r from-[#00A859] via-[#FFCC00] to-[#003B70] opacity-80" />
-
-        <div class="pt-1 text-center">
-          <p class="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-            Justiça Eleitoral • República Federativa do Brasil
+        <div class="pt-2 text-center border-t border-white/10">
+          <p class="text-[11px] font-medium text-gray-500">
+            Secure access for students and teachers
           </p>
         </div>
       </div>
     </div>
   </section>
 </template>
+

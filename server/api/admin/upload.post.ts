@@ -1,10 +1,48 @@
-import { defineEventHandler, readMultipartFormData, createError } from 'h3'
-import { serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
+import { defineEventHandler, readMultipartFormData, createError, getHeader } from 'h3'
+import { serverSupabaseClient, serverSupabaseServiceRole, serverSupabaseUser } from '#supabase/server'
 
 export default defineEventHandler(async (event) => {
-  const user = await serverSupabaseUser(event)
-  if (!user) {
-    throw createError({ statusCode: 401, statusMessage: 'Não autorizado' })
+  const client = await serverSupabaseServiceRole(event)
+
+  let user = await serverSupabaseUser(event).catch(() => null)
+  let userId = user?.id || (user as any)?.sub
+  let userEmail = user?.email
+
+  if (!userId || !userEmail) {
+    try {
+      const stdClient = await serverSupabaseClient(event)
+      const { data: { user: authUser } } = await stdClient.auth.getUser()
+      userId = authUser?.id || (authUser as any)?.sub || userId
+      userEmail = authUser?.email || userEmail
+    } catch (err) {}
+  }
+
+  if (!userId || !userEmail) {
+    const authHeader = getHeader(event, 'authorization')
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7)
+      const { data } = await client.auth.getUser(token)
+      userId = data?.user?.id || userId
+      userEmail = data?.user?.email || userEmail
+    }
+  }
+
+  // Verificar admin
+  const { data: adminList } = await client
+    .from('administradores')
+    .select('*')
+
+  let isAdmin = false
+  if (adminList && adminList.length > 0) {
+    isAdmin = adminList.some((adm: any) => {
+      const matchId = userId && adm.user_id && String(adm.user_id).toLowerCase() === String(userId).toLowerCase()
+      const matchEmail = userEmail && adm.email && String(adm.email).trim().toLowerCase() === String(userEmail).trim().toLowerCase()
+      return matchId || matchEmail
+    })
+  }
+
+  if (!isAdmin) {
+    throw createError({ statusCode: 403, statusMessage: 'Acesso negado. Apenas administradores podem fazer upload de imagens.' })
   }
 
   const formData = await readMultipartFormData(event)
@@ -14,13 +52,10 @@ export default defineEventHandler(async (event) => {
 
   const fileItem = formData.find((item) => item.name === 'file' || item.filename)
   if (!fileItem || !fileItem.data) {
-    throw createError({ statusCode: 400, statusMessage: 'Arquivo inválido.' })
+    throw createError({ statusCode: 400, statusMessage: 'Arquivo de imagem inválido.' })
   }
 
-  const client = await serverSupabaseServiceRole(event)
-
-  // Assegurar que o bucket 'candidatos' existe e é público
-  const BUCKET_NAME = 'candidatos'
+  const BUCKET_NAME = 'filmes'
   const { data: buckets } = await client.storage.listBuckets()
   const exists = buckets?.some((b) => b.name === BUCKET_NAME)
 
@@ -40,7 +75,7 @@ export default defineEventHandler(async (event) => {
     })
 
   if (uploadError) {
-    // Se falhar upload no storage (ex: permissões de bucket no supabase), fallback para base64 data URL
+    // Fallback garantido para Data URL base64 se o bucket do Supabase estiver com RLS estrito
     const base64 = fileItem.data.toString('base64')
     const mime = fileItem.type || 'image/png'
     return { url: `data:${mime};base64,${base64}` }

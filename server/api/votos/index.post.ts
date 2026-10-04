@@ -4,12 +4,14 @@ import { serverSupabaseClient, serverSupabaseServiceRole, serverSupabaseUser } f
 export default defineEventHandler(async (event) => {
   let user = await serverSupabaseUser(event)
   let userId = user?.id || (user as any)?.sub
+  let userEmail = user?.email
 
   if (!userId) {
     try {
       const stdClient = await serverSupabaseClient(event)
       const { data: { user: authUser } } = await stdClient.auth.getUser()
       userId = authUser?.id || (authUser as any)?.sub
+      userEmail = authUser?.email || userEmail
     } catch (err) {}
   }
 
@@ -19,71 +21,36 @@ export default defineEventHandler(async (event) => {
 
   const client = await serverSupabaseServiceRole(event)
   const body = await readBody(event)
+  const { filme_id } = body
 
-  const { eleicao_id, candidato_numero, tipo_voto } = body
-
-  // 1. Buscar eleição para validar status e data de encerramento
-  const { data: eleicao } = await client
-    .from('eleicoes')
-    .select('*')
-    .eq('id', eleicao_id)
-    .single()
-
-  if (!eleicao) {
-    throw createError({ statusCode: 404, statusMessage: 'Eleição não encontrada.' })
+  if (!filme_id) {
+    throw createError({ statusCode: 400, statusMessage: 'Filme não selecionado.' })
   }
 
-  const agora = new Date().getTime()
-  const dataFim = eleicao.data_fim ? new Date(eleicao.data_fim).getTime() : null
-
-  if (eleicao.status === 'finalizada' || eleicao.status === 'encerrada' || (dataFim && agora >= dataFim)) {
-    throw createError({ statusCode: 400, statusMessage: 'Votação encerrada! Esta eleição não aceita mais novos votos.' })
-  }
-
-  // 2. Verificar se o usuário já votou nesta eleição
-  const { data: votosExistentes } = await client
+  // 1. Verificar se o e-mail / usuário já registrou voto
+  const { data: votoExistente } = await client
     .from('votos')
     .select('id')
-    .eq('eleicao_id', eleicao_id)
-    .eq('user_id', userId)
+    .or(`user_id.eq.${userId},email.eq.${userEmail || ''}`)
+    .maybeSingle()
 
-  if (votosExistentes && votosExistentes.length > 0) {
-    throw createError({ statusCode: 400, statusMessage: 'Você já registrou seu voto nesta eleição!' })
+  if (votoExistente) {
+    throw createError({ statusCode: 400, statusMessage: 'Você já registrou seu voto nesta sessão de cinema!' })
   }
 
-  let candidatoId: string | null = null
-  let finalTipoVoto = tipo_voto || 'nominal'
-
-  if (finalTipoVoto === 'nominal' && candidato_numero) {
-    const { data: candidato } = await client
-      .from('candidatos')
-      .select('id')
-      .eq('eleicao_id', eleicao_id)
-      .eq('numero', candidato_numero)
-      .single()
-
-    if (candidato) {
-      candidatoId = candidato.id
-    } else {
-      // Se não encontrar o número digitado, o voto é considerado NULO
-      finalTipoVoto = 'nulo'
-    }
-  }
-
-  // 2. Inserir voto garantindo user_id VÁLIDO e NÃO NULO
+  // 2. Inserir voto único no banco
   const { data: novoVoto, error: insertError } = await client
     .from('votos')
     .insert({
-      eleicao_id,
+      filme_id,
       user_id: userId,
-      candidato_id: candidatoId,
-      tipo_voto: finalTipoVoto,
+      email: userEmail || `${userId}@aluno.cultura.br`,
     })
     .select()
     .single()
 
   if (insertError) {
-    throw createError({ statusCode: 500, statusMessage: insertError.message })
+    throw createError({ statusCode: 500, statusMessage: insertError.message || 'Erro ao registrar voto.' })
   }
 
   return { success: true, voto: novoVoto }
